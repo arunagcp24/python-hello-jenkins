@@ -19,10 +19,11 @@ pipeline {
         
         stage('Setup GCP Authentication') {
             steps {
-                echo 'Setting up GCP configuration...'
+                echo 'Setting up GCP configuration and Docker authentication...'
                 bat '''
                     gcloud config set project %PROJECT_ID%
-                    gcloud auth configure-docker %GAR_LOCATION%-docker.pkg.dev
+                    gcloud auth configure-docker %GAR_LOCATION%-docker.pkg.dev --quiet
+                    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://%GAR_LOCATION%-docker.pkg.dev
                 '''
             }
         }
