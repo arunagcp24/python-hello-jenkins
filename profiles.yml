@@ -1,0 +1,14 @@
+bq_analytics:
+  outputs:
+    prod:
+      dataset: bq_dbt_analytics
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      location: asia-south1
+      method: service-account
+      keyfile: /app/service-account-key.json
+      priority: interactive
+      project: project-51b9a3dd-ce80-4752-b31
+      threads: 4
+      type: bigquery
+  target: prod

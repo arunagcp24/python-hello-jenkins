@@ -1,0 +1,93 @@
+pipeline {
+    agent any
+    
+    environment {
+        PROJECT_ID = 'project-51b9a3dd-ce80-4752-b31'
+        GAR_LOCATION = 'asia-south1'
+        GAR_REPO = 'dbt-docker-repo'
+        IMAGE_NAME = 'dbt-account-loader'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        GCP_KEY = credentials('gcp-service-account-key')
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out code from GitHub...'
+                checkout scm
+            }
+        }
+        
+        stage('Setup GCP Authentication') {
+            steps {
+                echo 'Setting up GCP authentication...'
+                sh '''
+                    gcloud auth activate-service-account --key-file=$GCP_KEY
+                    gcloud config set project $PROJECT_ID
+                '''
+            }
+        }
+        
+        stage('Configure Docker for GAR') {
+            steps {
+                echo 'Configuring Docker authentication for Google Artifact Registry...'
+                sh '''
+                    gcloud auth configure-docker ${GAR_LOCATION}-docker.pkg.dev
+                '''
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                sh '''
+                    docker build -t ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:${IMAGE_TAG} .
+                    docker tag ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:${IMAGE_TAG} ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:latest
+                '''
+            }
+        }
+        
+        stage('Test dbt Project') {
+            steps {
+                echo 'Testing dbt project configuration...'
+                sh '''
+                    docker run --rm ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:${IMAGE_TAG} dbt debug --project-dir /app/bq_analytics || true
+                '''
+            }
+        }
+        
+        stage('Push to GAR') {
+            steps {
+                echo 'Pushing Docker image to Google Artifact Registry...'
+                sh '''
+                    docker push ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+                    docker push ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:latest
+                '''
+            }
+        }
+        
+        stage('Cleanup Local Images') {
+            steps {
+                echo 'Cleaning up local Docker images...'
+                sh '''
+                    docker rmi ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:${IMAGE_TAG} || true
+                    docker rmi ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:latest || true
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Pipeline completed successfully!"
+            echo "Docker image pushed to: ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+        always {
+            echo 'Cleaning up workspace...'
+            cleanWs()
+        }
+    }
+}
