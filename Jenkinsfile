@@ -7,7 +7,6 @@ pipeline {
         GAR_REPO = 'dbt-docker-repo'
         IMAGE_NAME = 'dbt-account-loader'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        GCP_KEY = credentials('gcp-service-account-key')
     }
     
     stages {
@@ -20,19 +19,19 @@ pipeline {
         
         stage('Setup GCP Authentication') {
             steps {
-                echo 'Setting up GCP authentication...'
+                echo 'Setting up GCP configuration...'
                 bat '''
-                    gcloud auth activate-service-account --key-file=%GCP_KEY%
                     gcloud config set project %PROJECT_ID%
+                    gcloud auth configure-docker %GAR_LOCATION%-docker.pkg.dev
                 '''
             }
         }
         
-        stage('Configure Docker for GAR') {
+        stage('Verify Docker') {
             steps {
-                echo 'Configuring Docker authentication for Google Artifact Registry...'
+                echo 'Verifying Docker is running...'
                 bat '''
-                    gcloud auth configure-docker %GAR_LOCATION%-docker.pkg.dev
+                    docker info
                 '''
             }
         }
