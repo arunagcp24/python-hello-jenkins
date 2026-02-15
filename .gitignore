@@ -18,6 +18,12 @@ logs/
 # Docker
 *.dockerignore
 
+# GCP Credentials - DO NOT COMMIT
+gcp-credentials.json
+gcp-service-account-key.json
+*credentials*.json
+key.json
+
 # IDE
 .vscode/
 .idea/
