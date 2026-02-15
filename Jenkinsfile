@@ -7,6 +7,7 @@ pipeline {
         GAR_REPO = 'dbt-docker-repo'
         IMAGE_NAME = 'dbt-account-loader'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
+        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-application-credentials')
     }
     
     stages {
@@ -22,8 +23,7 @@ pipeline {
                 echo 'Setting up GCP configuration and Docker authentication...'
                 bat '''
                     gcloud config set project %PROJECT_ID%
-                    gcloud auth configure-docker %GAR_LOCATION%-docker.pkg.dev --quiet
-                    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://%GAR_LOCATION%-docker.pkg.dev
+                    gcloud auth application-default print-access-token | docker login -u oauth2accesstoken --password-stdin https://%GAR_LOCATION%-docker.pkg.dev
                 '''
             }
         }
