@@ -1,0 +1,129 @@
+====================================================================
+          JENKINS MANUAL SETUP INSTRUCTIONS                  
+====================================================================
+
+Jenkins URL: http://localhost:8080
+Follow these steps to configure Jenkins to build Docker images:
+
+--------------------------------------------------------------------
+ STEP 1: Add GCP Credentials                                 
+--------------------------------------------------------------------
+
+1. In Jenkins, click: Manage Jenkins
+2. Click: Credentials  
+3. Click: System then Global credentials then Add Credentials
+4. Fill in the form:
+   Kind:        Secret file
+   Scope:       Global
+   File:        Click Choose File and select your GCP JSON key
+   ID:          gcp-service-account-key
+                (Type EXACTLY as shown above!)
+   Description: GCP Service Account for BigQuery and GAR
+5. Click: Create
+
+--------------------------------------------------------------------
+ STEP 2: Create Pipeline Job                                 
+--------------------------------------------------------------------
+
+1. Go back to Jenkins Dashboard
+2. Click: New Item
+3. Enter name: dbt-docker-build
+4. Select: Pipeline
+5. Click: OK
+
+--------------------------------------------------------------------
+ STEP 3: Configure Pipeline                                   
+--------------------------------------------------------------------
+
+In the job configuration page:
+
+General Section:
+  Description: Build dbt Docker image and push to Google Artifact Registry
+
+Build Triggers (optional):
+  Check box: Poll SCM
+  Schedule: H/5 * * * *
+
+Pipeline Section:
+  Definition:          Pipeline script from SCM
+  SCM:                 Git
+  Repository URL:      https://github.com/arunagcp24/python-hello-jenkins.git
+  Credentials:         (leave as none - public repo)
+  Branch Specifier:    */main
+  Script Path:         Jenkinsfile
+
+Click: Save at the bottom
+
+--------------------------------------------------------------------
+ STEP 4: Build the Docker Image!                                           
+--------------------------------------------------------------------
+
+1. You will be on the job page after saving
+2. On the left sidebar, click: Build Now
+3. A build will start - click on the build number (e.g., #1)
+4. Click: Console Output
+5. Watch the build execute in real-time!
+
+Expected Pipeline Stages:
+  Stage 1: Checkout (clone code from GitHub)
+  Stage 2: Setup GCP Authentication
+  Stage 3: Configure Docker for GAR
+  Stage 4: Build Docker Image (takes 3-5 minutes)
+  Stage 5: Test dbt Project
+  Stage 6: Push to GAR
+  Stage 7: Cleanup
+
+Total Build Duration: 5-7 minutes
+
+Success Message:
+  Pipeline completed successfully!
+  Docker image pushed to: asia-south1-docker...
+
+--------------------------------------------------------------------
+ STEP 5: VERIFY THE BUILD                                                 
+--------------------------------------------------------------------
+
+After Jenkins shows SUCCESS, verify in PowerShell:
+
+gcloud artifacts docker images list asia-south1-docker.pkg.dev/project-51b9a3dd-ce80-4752-b31/dbt-docker-repo/dbt-account-loader
+
+You should see:
+  - Image with tag 'latest'
+  - Image with tag matching build number
+  - Size: approximately 252 MB
+  - CREATE_TIME: recent timestamp
+
+====================================================================
+Next Steps After Successful Build
+====================================================================
+
+Your Docker image is now in Google Artifact Registry!
+
+You can now:
+1. Use the image in Airflow DAG
+2. Pull and run locally:
+   docker pull asia-south1-docker.pkg.dev/project-51b9a3dd-ce80-4752-b31/dbt-docker-repo/dbt-account-loader:latest
+
+3. Set up Airflow to run the dbt job automatically
+
+====================================================================
+Troubleshooting
+====================================================================
+
+If build fails at "Setup GCP Authentication":
+  - Check that credential ID is exactly: gcp-service-account-key
+  - Verify you uploaded the correct GCP JSON key file
+
+If build fails at "Build Docker Image":
+  - Ensure Docker Desktop is running
+  - Check Docker has enough resources (CPU/Memory)
+
+If build fails at "Push to GAR":
+  - Verify GAR repository exists
+  - Check service account has Artifact Registry Writer role
+
+====================================================================
+For more help, see:
+  - JENKINS_BUILD_NOW.md
+  - JENKINS_SETUP_GUIDE.md
+====================================================================
