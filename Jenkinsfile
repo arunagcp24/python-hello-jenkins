@@ -22,8 +22,12 @@ pipeline {
             steps {
                 echo 'Setting up GCP configuration and Docker authentication...'
                 bat '''
+                    echo Credentials file: %GOOGLE_APPLICATION_CREDENTIALS%
+                    set GOOGLE_APPLICATION_CREDENTIALS=%GOOGLE_APPLICATION_CREDENTIALS%
                     gcloud config set project %PROJECT_ID%
-                    gcloud auth application-default print-access-token | docker login -u oauth2accesstoken --password-stdin https://%GAR_LOCATION%-docker.pkg.dev
+                    gcloud auth application-default print-access-token > token.txt
+                    type token.txt | docker login -u oauth2accesstoken --password-stdin https://%GAR_LOCATION%-docker.pkg.dev
+                    del token.txt
                 '''
             }
         }
