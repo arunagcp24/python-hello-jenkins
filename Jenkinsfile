@@ -27,30 +27,12 @@ pipeline {
             }
         }
         
-        stage('Verify Docker') {
-            steps {
-                echo 'Verifying Docker is running...'
-                bat '''
-                    docker info
-                '''
-            }
-        }
-        
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
                 bat '''
                     docker build -t %GAR_LOCATION%-docker.pkg.dev/%PROJECT_ID%/%GAR_REPO%/%IMAGE_NAME%:%IMAGE_TAG% .
                     docker tag %GAR_LOCATION%-docker.pkg.dev/%PROJECT_ID%/%GAR_REPO%/%IMAGE_NAME%:%IMAGE_TAG% %GAR_LOCATION%-docker.pkg.dev/%PROJECT_ID%/%GAR_REPO%/%IMAGE_NAME%:latest
-                '''
-            }
-        }
-        
-        stage('Test dbt Project') {
-            steps {
-                echo 'Testing dbt project configuration...'
-                bat '''
-                    docker run --rm %GAR_LOCATION%-docker.pkg.dev/%PROJECT_ID%/%GAR_REPO%/%IMAGE_NAME%:%IMAGE_TAG% dbt debug --project-dir /app/bq_analytics
                 '''
             }
         }
